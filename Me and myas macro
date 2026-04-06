@@ -1,0 +1,191 @@
+local Players = game:GetService("Players")
+local ContextActionService = game:GetService("ContextActionService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local camera = workspace.CurrentCamera
+
+-- FOV Extender (locked at 115)
+camera.FieldOfView = 115
+camera:GetPropertyChangedSignal("FieldOfView"):Connect(function()
+	if camera.FieldOfView ~= 115 then
+		camera.FieldOfView = 115
+	end
+end)
+
+local player = Players.LocalPlayer
+
+-- timings
+local speedDelay = 0.007
+local comboSpeed = 0.004
+local comboHold = 0.03
+local rpgSpeed = speedDelay * 2.5
+local snowballSlow = 0.04
+
+task.wait(1)
+
+local viewport = camera.ViewportSize
+
+-- ⬇️ NOW TOTAL +14 DOWN
+local CLICK_X = viewport.X / 2
+local CLICK_Y = viewport.Y / 2 - 15 + 14
+
+-- ⬇️ LOCK unchanged
+local LOCK_X = viewport.X - 170
+local LOCK_Y = viewport.Y - 100
+
+-------------------------------------------------
+-- Crosshair (ORIGINAL POSITION)
+-------------------------------------------------
+
+local gui = Instance.new("ScreenGui")
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local crossX = viewport.X / 2
+local crossY = (viewport.Y / 2 - 15) - 45
+
+local hLine = Instance.new("Frame")
+hLine.Size = UDim2.new(0, 24, 0, 3)
+hLine.Position = UDim2.new(0, crossX-12, 0, crossY-1)
+hLine.BackgroundColor3 = Color3.new(1,1,1)
+hLine.BorderSizePixel = 0
+hLine.Parent = gui
+
+local vLine = Instance.new("Frame")
+vLine.Size = UDim2.new(0, 3, 0, 24)
+vLine.Position = UDim2.new(0, crossX-1, 0, crossY-12)
+vLine.BackgroundColor3 = Color3.new(1,1,1)
+vLine.BorderSizePixel = 0
+vLine.Parent = gui
+
+-------------------------------------------------
+-- Helpers
+-------------------------------------------------
+
+local function click()
+	VirtualInputManager:SendMouseButtonEvent(CLICK_X, CLICK_Y, 0, true, game, 0)
+	task.wait(speedDelay)
+	VirtualInputManager:SendMouseButtonEvent(CLICK_X, CLICK_Y, 0, false, game, 0)
+end
+
+local function pressAndClick(key, speed)
+	VirtualInputManager:SendKeyEvent(true, key, false, game)
+	task.wait(speed)
+	VirtualInputManager:SendKeyEvent(false, key, false, game)
+	click()
+end
+
+local function comboPress(key)
+	VirtualInputManager:SendKeyEvent(true, key, false, game)
+	task.wait(comboHold)
+	VirtualInputManager:SendKeyEvent(false, key, false, game)
+	click()
+end
+
+-------------------------------------------------
+-- Snowballs
+-------------------------------------------------
+
+ContextActionService:BindAction("Snowballs", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		pressAndClick(Enum.KeyCode.Eight, snowballSlow)
+		pressAndClick(Enum.KeyCode.Nine, snowballSlow)
+		pressAndClick(Enum.KeyCode.Two, snowballSlow)
+	end
+end, false, Enum.KeyCode.ButtonR3)
+
+-------------------------------------------------
+-- Combo
+-------------------------------------------------
+
+local holdingL3 = false
+
+ContextActionService:BindAction("Combo", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		holdingL3 = true
+
+		comboPress(Enum.KeyCode.Four)
+		comboPress(Enum.KeyCode.Five)
+		comboPress(Enum.KeyCode.Six)
+		comboPress(Enum.KeyCode.Seven)
+
+		click()
+
+		if not holdingL3 then
+			comboPress(Enum.KeyCode.Two)
+		end
+
+	elseif state == Enum.UserInputState.End then
+		holdingL3 = false
+	end
+end, false, Enum.KeyCode.ButtonL3)
+
+-------------------------------------------------
+-- RPG
+-------------------------------------------------
+
+ContextActionService:BindAction("RPG", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		pressAndClick(Enum.KeyCode.One, rpgSpeed)
+		pressAndClick(Enum.KeyCode.R, rpgSpeed)
+		pressAndClick(Enum.KeyCode.Two, rpgSpeed)
+	end
+end, false, Enum.KeyCode.ButtonL1)
+
+-------------------------------------------------
+-- Grenade
+-------------------------------------------------
+
+ContextActionService:BindAction("Grenade", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		pressAndClick(Enum.KeyCode.Three, speedDelay)
+		pressAndClick(Enum.KeyCode.Two, speedDelay)
+	end
+end, false, Enum.KeyCode.ButtonR1)
+
+-------------------------------------------------
+-- Taser
+-------------------------------------------------
+
+ContextActionService:BindAction("Taser", function(_, state)
+	if state == Enum.UserInputState.Begin then
+
+		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Zero, false, game)
+		task.wait(speedDelay)
+		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Zero, false, game)
+		click()
+
+		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
+		task.wait(speedDelay)
+		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
+		click()
+
+	end
+end, false, Enum.KeyCode.DPadRight)
+
+-------------------------------------------------
+-- Off
+-------------------------------------------------
+
+ContextActionService:BindAction("Off", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		pressAndClick(Enum.KeyCode.Two, speedDelay)
+	end
+end, false, Enum.KeyCode.DPadDown)
+
+-------------------------------------------------
+-- Lock (UNCHANGED)
+-------------------------------------------------
+
+ContextActionService:BindAction("Lock", function(_, state)
+	if state == Enum.UserInputState.Begin then
+
+		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.G, false, game)
+		task.wait(speedDelay)
+		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.G, false, game)
+
+		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
+		task.wait(speedDelay)
+		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, false, game, 0)
+
+	end
+end, false, Enum.KeyCode.ButtonY)
