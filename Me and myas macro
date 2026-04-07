@@ -33,29 +33,52 @@ local LOCK_X = viewport.X - 170
 local LOCK_Y = viewport.Y - 100
 
 -------------------------------------------------
--- Crosshair (ORIGINAL POSITION)
+-- Crosshair (4 lines + dot + outline, uniform 1px larger gap)
 -------------------------------------------------
 
+local PlayerGui = player:WaitForChild("PlayerGui")
+
 local gui = Instance.new("ScreenGui")
+gui.Name = "CrosshairGui"
 gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Enabled = true
+gui.DisplayOrder = 1000
+gui.Parent = PlayerGui
 
-local crossX = viewport.X / 2
-local crossY = (viewport.Y / 2 - 15) - 45
+local centerX, centerY = viewport.X / 2, viewport.Y / 2 - 15 - 45
 
-local hLine = Instance.new("Frame")
-hLine.Size = UDim2.new(0, 24, 0, 3)
-hLine.Position = UDim2.new(0, crossX-12, 0, crossY-1)
-hLine.BackgroundColor3 = Color3.new(1,1,1)
-hLine.BorderSizePixel = 0
-hLine.Parent = gui
+-- Helper to create frame + outline
+local function createFrameWithOutline(sizeX, sizeY, posX, posY, color, outlineColor)
+    local outline = Instance.new("Frame")
+    outline.Size = UDim2.new(0, sizeX + 2, 0, sizeY + 2)
+    outline.Position = UDim2.new(0, posX - 1, 0, posY - 1)
+    outline.BackgroundColor3 = outlineColor
+    outline.BorderSizePixel = 0
+    outline.Parent = gui
 
-local vLine = Instance.new("Frame")
-vLine.Size = UDim2.new(0, 3, 0, 24)
-vLine.Position = UDim2.new(0, crossX-1, 0, crossY-12)
-vLine.BackgroundColor3 = Color3.new(1,1,1)
-vLine.BorderSizePixel = 0
-vLine.Parent = gui
+    local inner = Instance.new("Frame")
+    inner.Size = UDim2.new(0, sizeX, 0, sizeY)
+    inner.Position = UDim2.new(0, posX, 0, posY)
+    inner.BackgroundColor3 = color
+    inner.BorderSizePixel = 0
+    inner.Parent = gui
+
+    return inner
+end
+
+local mainColor = Color3.new(1,1,1)
+local outlineColor = Color3.new(0,0,0)
+
+-- Dot
+createFrameWithOutline(2, 2, centerX - 1, centerY - 1, mainColor, outlineColor)
+
+-- Horizontal lines (7px, unchanged, shifted 1px further from dot)
+createFrameWithOutline(7, 2, centerX - 11, centerY - 1, mainColor, outlineColor) -- left
+createFrameWithOutline(7, 2, centerX + 4, centerY - 1, mainColor, outlineColor)  -- right
+
+-- Vertical lines (9px, 2px longer, shifted 1px further from dot)
+createFrameWithOutline(2, 9, centerX - 1, centerY - 13, mainColor, outlineColor) -- top
+createFrameWithOutline(2, 9, centerX - 1, centerY + 4, mainColor, outlineColor)  -- bottom
 
 -------------------------------------------------
 -- Helpers
