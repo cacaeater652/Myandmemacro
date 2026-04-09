@@ -33,7 +33,7 @@ local LOCK_X = viewport.X - 170
 local LOCK_Y = viewport.Y - 100
 
 -------------------------------------------------
--- Crosshair (4 lines + dot + outline, uniform 1px larger gap)
+-- Crosshair (4 lines + dot + outline, PINK)
 -------------------------------------------------
 
 local PlayerGui = player:WaitForChild("PlayerGui")
@@ -66,17 +66,18 @@ local function createFrameWithOutline(sizeX, sizeY, posX, posY, color, outlineCo
     return inner
 end
 
-local mainColor = Color3.new(1,1,1)
+-- ✅ PINK COLOR HERE
+local mainColor = Color3.fromRGB(255, 105, 180)
 local outlineColor = Color3.new(0,0,0)
 
 -- Dot
 createFrameWithOutline(2, 2, centerX - 1, centerY - 1, mainColor, outlineColor)
 
--- Horizontal lines (7px, unchanged, shifted 1px further from dot)
+-- Horizontal lines
 createFrameWithOutline(7, 2, centerX - 11, centerY - 1, mainColor, outlineColor) -- left
 createFrameWithOutline(7, 2, centerX + 4, centerY - 1, mainColor, outlineColor)  -- right
 
--- Vertical lines (9px, 2px longer, shifted 1px further from dot)
+-- Vertical lines
 createFrameWithOutline(2, 9, centerX - 1, centerY - 13, mainColor, outlineColor) -- top
 createFrameWithOutline(2, 9, centerX - 1, centerY + 4, mainColor, outlineColor)  -- bottom
 
