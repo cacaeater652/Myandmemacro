@@ -4,6 +4,13 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local UserInputService = game:GetService("UserInputService")
 local camera = workspace.CurrentCamera
 
+local player = Players.LocalPlayer
+
+-------------------------------------------------
+-- SETUP FUNCTION (RUNS ON SPAWN)
+-------------------------------------------------
+local function setup()
+
 -- FOV Extender (locked at 115)
 camera.FieldOfView = 115
 camera:GetPropertyChangedSignal("FieldOfView"):Connect(function()
@@ -11,8 +18,6 @@ camera:GetPropertyChangedSignal("FieldOfView"):Connect(function()
 		camera.FieldOfView = 115
 	end
 end)
-
-local player = Players.LocalPlayer
 
 -- timings
 local speedDelay = 0.007
@@ -25,21 +30,27 @@ task.wait(1)
 
 local viewport = camera.ViewportSize
 
--- Click & Lock positions
 local CLICK_X = viewport.X / 2
 local CLICK_Y = viewport.Y / 2 - 15 + 14
 local LOCK_X = viewport.X - 170
 local LOCK_Y = viewport.Y - 100
 
 -------------------------------------------------
--- Crosshair (4 lines + dot + outline)
+-- Crosshair
 -------------------------------------------------
 local PlayerGui = player:WaitForChild("PlayerGui")
+
+-- prevent duplicates
+if PlayerGui:FindFirstChild("CrosshairGui") then
+	PlayerGui.CrosshairGui:Destroy()
+end
+if PlayerGui:FindFirstChild("ColorUI") then
+	PlayerGui.ColorUI:Destroy()
+end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "CrosshairGui"
 gui.ResetOnSpawn = false
-gui.Enabled = true
 gui.DisplayOrder = 1000
 gui.Parent = PlayerGui
 
@@ -65,15 +76,11 @@ local function createFrameWithOutline(sizeX, sizeY, posX, posY)
 	inner.Parent = gui
 
 	table.insert(crosshairParts, inner)
-	return inner
 end
 
--- Dot
 createFrameWithOutline(2, 2, centerX - 1, centerY - 1)
--- Horizontal lines
 createFrameWithOutline(7, 2, centerX - 11, centerY - 1)
 createFrameWithOutline(7, 2, centerX + 4, centerY - 1)
--- Vertical lines
 createFrameWithOutline(2, 9, centerX - 1, centerY - 13)
 createFrameWithOutline(2, 9, centerX - 1, centerY + 4)
 
@@ -108,6 +115,17 @@ local function comboPress(key)
 end
 
 -------------------------------------------------
+-- Unbind first (IMPORTANT)
+-------------------------------------------------
+ContextActionService:UnbindAction("Snowballs")
+ContextActionService:UnbindAction("Combo")
+ContextActionService:UnbindAction("RPG")
+ContextActionService:UnbindAction("Grenade")
+ContextActionService:UnbindAction("Taser")
+ContextActionService:UnbindAction("Off")
+ContextActionService:UnbindAction("Lock")
+
+-------------------------------------------------
 -- Snowballs
 -------------------------------------------------
 ContextActionService:BindAction("Snowballs", function(_, state)
@@ -119,7 +137,7 @@ ContextActionService:BindAction("Snowballs", function(_, state)
 end, false, Enum.KeyCode.ButtonR3)
 
 -------------------------------------------------
--- Combo (hold vs tap)
+-- Combo (UNCHANGED)
 -------------------------------------------------
 local holdingL3 = false
 
@@ -194,162 +212,14 @@ ContextActionService:BindAction("Lock", function(_, state)
 	end
 end, false, Enum.KeyCode.ButtonY)
 
--------------------------------------------------
--- 🎨 COLOR PALETTE UI
--------------------------------------------------
-local ui = Instance.new("ScreenGui")
-ui.Name = "ColorUI"
-ui.ResetOnSpawn = false
-ui.Parent = PlayerGui
-
--- Toggle
-local toggle = Instance.new("TextButton")
-toggle.Size = UDim2.new(0,50,0,50)
-toggle.Position = UDim2.new(0,10,0,10)
-toggle.Text = "🎨"
-toggle.BackgroundColor3 = Color3.fromRGB(40,40,40)
-toggle.TextScaled = true
-toggle.Parent = ui
-
--- Dragging
-local dragging = false
-local dragInput, dragStart, startPos
-toggle.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = input.Position
-		startPos = toggle.Position
-	end
-end)
-toggle.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = false
-	end
-end)
-toggle.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement then
-		dragInput = input
-	end
-end)
-UserInputService.InputChanged:Connect(function(input)
-	if dragging and input == dragInput then
-		local delta = input.Position - dragStart
-		toggle.Position = UDim2.new(
-			startPos.X.Scale, startPos.X.Offset + delta.X,
-			startPos.Y.Scale, startPos.Y.Offset + delta.Y
-		)
-	end
-end)
-
--- Panel
-local panel = Instance.new("Frame")
-panel.Size = UDim2.new(0, 360, 0, 400)
-panel.Position = UDim2.new(0,10,0,70)
-panel.BackgroundColor3 = Color3.fromRGB(30,30,30)
-panel.Visible = false
-panel.Parent = ui
-
-toggle.MouseButton1Click:Connect(function()
-	panel.Visible = not panel.Visible
-end)
-
--- Favorites label & frame
-local favoritesLabel = Instance.new("TextLabel")
-favoritesLabel.Text = "⭐ Favorites"
-favoritesLabel.Size = UDim2.new(0, 340, 0, 24)
-favoritesLabel.Position = UDim2.new(0,10,0,10)
-favoritesLabel.BackgroundTransparency = 1
-favoritesLabel.TextColor3 = Color3.fromRGB(255,255,255)
-favoritesLabel.TextScaled = true
-favoritesLabel.Parent = panel
-
-local favoritesFrame = Instance.new("Frame")
-favoritesFrame.Size = UDim2.new(0, 340, 0, 40)
-favoritesFrame.Position = UDim2.new(0,10,0,40)
-favoritesFrame.BackgroundTransparency = 1
-favoritesFrame.Parent = panel
-
-local favoriteButtons = {}
-local function addFavorite(color)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 32, 0, 32)
-	btn.Position = UDim2.new(0, #favoriteButtons*36, 0, 0)
-	btn.BackgroundColor3 = color
-	btn.BorderSizePixel = 0
-	btn.Text = ""
-	btn.Parent = favoritesFrame
-	btn.MouseButton1Click:Connect(function()
-		updateCrosshairColor(color)
-	end)
-	table.insert(favoriteButtons, btn)
 end
 
--- Save / Delete buttons
-local saveBtn = Instance.new("TextButton")
-saveBtn.Size = UDim2.new(0,100,0,32)
-saveBtn.Position = UDim2.new(0,10,0,90)
-saveBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-saveBtn.TextColor3 = Color3.fromRGB(255,255,255)
-saveBtn.Text = "Save Color"
-saveBtn.Parent = panel
-saveBtn.MouseButton1Click:Connect(function()
-	addFavorite(mainColor)
-end)
+-------------------------------------------------
+-- RUN + AUTO RESPAWN
+-------------------------------------------------
+setup()
 
-local deleteBtn = Instance.new("TextButton")
-deleteBtn.Size = UDim2.new(0,100,0,32)
-deleteBtn.Position = UDim2.new(0,120,0,90)
-deleteBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-deleteBtn.TextColor3 = Color3.fromRGB(255,255,255)
-deleteBtn.Text = "Delete Color"
-deleteBtn.Parent = panel
-deleteBtn.MouseButton1Click:Connect(function()
-	for i, btn in ipairs(favoriteButtons) do
-		if btn.BackgroundColor3 == mainColor then
-			btn:Destroy()
-			table.remove(favoriteButtons, i)
-			for j, b in ipairs(favoriteButtons) do
-				b.Position = UDim2.new(0, (j-1)*36, 0, 0)
-			end
-			break
-		end
-	end
-end)
-
--- Scrollable HSV palette
-local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(0,340,0,250)
-scrollFrame.Position = UDim2.new(0,10,0,140)
-scrollFrame.BackgroundTransparency = 1
-scrollFrame.ScrollBarThickness = 10
-scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-scrollFrame.Parent = panel
-
-local gridSize = 12
-local spacing = 28
-for row = 0, gridSize-1 do
-	for col = 0, gridSize-1 do
-		local btn = Instance.new("TextButton")
-		btn.Size = UDim2.new(0,24,0,24)
-		btn.Position = UDim2.new(0, col*spacing+10, 0, row*spacing+10)
-		btn.BackgroundColor3 = Color3.fromHSV(col/(gridSize-1), 1-row/(gridSize-1), 1)
-		btn.BorderSizePixel = 0
-		btn.Text = ""
-		btn.Parent = scrollFrame
-		btn.MouseButton1Click:Connect(function()
-			updateCrosshairColor(btn.BackgroundColor3)
-		end)
-	end
-end
-
--- Black button
-local blackBtn = Instance.new("TextButton")
-blackBtn.Size = UDim2.new(0,24,0,24)
-blackBtn.Position = UDim2.new(0, gridSize*spacing+10, 0, gridSize*spacing+10)
-blackBtn.BackgroundColor3 = Color3.fromRGB(0,0,0)
-blackBtn.BorderSizePixel = 0
-blackBtn.Text = ""
-blackBtn.Parent = scrollFrame
-blackBtn.MouseButton1Click:Connect(function()
-	updateCrosshairColor(Color3.fromRGB(0,0,0))
+player.CharacterAdded:Connect(function()
+	task.wait(0.5)
+	setup()
 end)
