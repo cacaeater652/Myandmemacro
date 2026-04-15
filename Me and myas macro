@@ -92,6 +92,131 @@ local function updateCrosshairColor(color)
 end
 
 -------------------------------------------------
+-- 🎨 COLOR PALETTE UI
+-------------------------------------------------
+local ui = Instance.new("ScreenGui")
+ui.Name = "ColorUI"
+ui.ResetOnSpawn = false
+ui.Parent = PlayerGui
+
+-- Toggle
+local toggle = Instance.new("TextButton")
+toggle.Size = UDim2.new(0,50,0,50)
+toggle.Position = UDim2.new(0,10,0,10)
+toggle.Text = "🎨"
+toggle.BackgroundColor3 = Color3.fromRGB(40,40,40)
+toggle.TextScaled = true
+toggle.Parent = ui
+
+-- Dragging
+local dragging = false
+local dragInput, dragStart, startPos
+toggle.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = toggle.Position
+	end
+end)
+toggle.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+toggle.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input == dragInput then
+		local delta = input.Position - dragStart
+		toggle.Position = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+-- Panel
+local panel = Instance.new("Frame")
+panel.Size = UDim2.new(0, 360, 0, 400)
+panel.Position = UDim2.new(0,10,0,70)
+panel.BackgroundColor3 = Color3.fromRGB(30,30,30)
+panel.Visible = false
+panel.Parent = ui
+
+toggle.MouseButton1Click:Connect(function()
+	panel.Visible = not panel.Visible
+end)
+
+-- Favorites
+local favoritesFrame = Instance.new("Frame")
+favoritesFrame.Size = UDim2.new(0, 340, 0, 40)
+favoritesFrame.Position = UDim2.new(0,10,0,10)
+favoritesFrame.BackgroundTransparency = 1
+favoritesFrame.Parent = panel
+
+local favoriteButtons = {}
+
+local function addFavorite(color)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0, 32, 0, 32)
+	btn.Position = UDim2.new(0, #favoriteButtons*36, 0, 0)
+	btn.BackgroundColor3 = color
+	btn.BorderSizePixel = 0
+	btn.Text = ""
+	btn.Parent = favoritesFrame
+
+	btn.MouseButton1Click:Connect(function()
+		updateCrosshairColor(color)
+	end)
+
+	table.insert(favoriteButtons, btn)
+end
+
+-- Save button
+local saveBtn = Instance.new("TextButton")
+saveBtn.Size = UDim2.new(0,100,0,32)
+saveBtn.Position = UDim2.new(0,10,0,60)
+saveBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+saveBtn.TextColor3 = Color3.fromRGB(255,255,255)
+saveBtn.Text = "Save Color"
+saveBtn.Parent = panel
+
+saveBtn.MouseButton1Click:Connect(function()
+	addFavorite(mainColor)
+end)
+
+-- Palette
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(0,340,0,280)
+scrollFrame.Position = UDim2.new(0,10,0,100)
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.ScrollBarThickness = 10
+scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scrollFrame.Parent = panel
+
+local gridSize = 12
+local spacing = 28
+
+for row = 0, gridSize-1 do
+	for col = 0, gridSize-1 do
+		local btn = Instance.new("TextButton")
+		btn.Size = UDim2.new(0,24,0,24)
+		btn.Position = UDim2.new(0, col*spacing+10, 0, row*spacing+10)
+		btn.BackgroundColor3 = Color3.fromHSV(col/(gridSize-1), 1-row/(gridSize-1), 1)
+		btn.BorderSizePixel = 0
+		btn.Text = ""
+		btn.Parent = scrollFrame
+
+		btn.MouseButton1Click:Connect(function()
+			updateCrosshairColor(btn.BackgroundColor3)
+		end)
+	end
+end
+
+-------------------------------------------------
 -- Helpers
 -------------------------------------------------
 local function click()
@@ -115,7 +240,7 @@ local function comboPress(key)
 end
 
 -------------------------------------------------
--- Unbind first (IMPORTANT)
+-- Unbind first
 -------------------------------------------------
 ContextActionService:UnbindAction("Snowballs")
 ContextActionService:UnbindAction("Combo")
@@ -126,7 +251,7 @@ ContextActionService:UnbindAction("Off")
 ContextActionService:UnbindAction("Lock")
 
 -------------------------------------------------
--- Snowballs
+-- Binds (UNCHANGED)
 -------------------------------------------------
 ContextActionService:BindAction("Snowballs", function(_, state)
 	if state == Enum.UserInputState.Begin then
@@ -136,11 +261,7 @@ ContextActionService:BindAction("Snowballs", function(_, state)
 	end
 end, false, Enum.KeyCode.ButtonR3)
 
--------------------------------------------------
--- Combo (UNCHANGED)
--------------------------------------------------
 local holdingL3 = false
-
 ContextActionService:BindAction("Combo", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		holdingL3 = true
@@ -155,15 +276,11 @@ ContextActionService:BindAction("Combo", function(_, state)
 		if not holdingL3 then
 			comboPress(Enum.KeyCode.Two)
 		end
-
 	elseif state == Enum.UserInputState.End then
 		holdingL3 = false
 	end
 end, false, Enum.KeyCode.ButtonL3)
 
--------------------------------------------------
--- RPG
--------------------------------------------------
 ContextActionService:BindAction("RPG", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		pressAndClick(Enum.KeyCode.One, rpgSpeed)
@@ -172,9 +289,6 @@ ContextActionService:BindAction("RPG", function(_, state)
 	end
 end, false, Enum.KeyCode.ButtonL1)
 
--------------------------------------------------
--- Grenade
--------------------------------------------------
 ContextActionService:BindAction("Grenade", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		pressAndClick(Enum.KeyCode.Three, speedDelay)
@@ -182,9 +296,6 @@ ContextActionService:BindAction("Grenade", function(_, state)
 	end
 end, false, Enum.KeyCode.ButtonR1)
 
--------------------------------------------------
--- Taser
--------------------------------------------------
 ContextActionService:BindAction("Taser", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		pressAndClick(Enum.KeyCode.Zero, speedDelay)
@@ -192,18 +303,12 @@ ContextActionService:BindAction("Taser", function(_, state)
 	end
 end, false, Enum.KeyCode.DPadRight)
 
--------------------------------------------------
--- Off
--------------------------------------------------
 ContextActionService:BindAction("Off", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		pressAndClick(Enum.KeyCode.Two, speedDelay)
 	end
 end, false, Enum.KeyCode.DPadDown)
 
--------------------------------------------------
--- Lock (ONLY CLICK)
--------------------------------------------------
 ContextActionService:BindAction("Lock", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
