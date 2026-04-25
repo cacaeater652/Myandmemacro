@@ -94,7 +94,34 @@ local function updateCrosshairColor(color)
 		part.BackgroundColor3 = color
 	end
 end
+-------------------------------------------------
+-- 🎮 DOUBLE TAP LEAVE SYSTEM
+-------------------------------------------------
+local lastDownPress = 0
+local lastSquarePress = 0
 
+local WINDOW = 0.5 -- time window for double tap
+
+local function tryLeave()
+	local now = os.clock()
+
+	if (now - lastDownPress) < WINDOW and (now - lastSquarePress) < WINDOW then
+		player:Kick("You left the game.")
+	end
+end
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+
+	if input.KeyCode == Enum.KeyCode.DPadDown then
+		lastDownPress = os.clock()
+		tryLeave()
+
+	elseif input.KeyCode == Enum.KeyCode.ButtonX then -- Square
+		lastSquarePress = os.clock()
+		tryLeave()
+	end
+end)
 -------------------------------------------------
 -- 🎨 UI
 -------------------------------------------------
