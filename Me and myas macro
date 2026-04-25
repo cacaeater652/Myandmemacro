@@ -273,6 +273,36 @@ end, false, Enum.KeyCode.ButtonY)
 end
 
 -------------------------------------------------
+-- 🎮 DOUBLE TAP LEAVE (DPAD LEFT + SQUARE)
+-------------------------------------------------
+
+local lastLeftPress = 0
+local lastSquarePress = 0
+
+local WINDOW = 0.5 -- time window for double tap
+
+local function tryLeave()
+	local now = os.clock()
+
+	if (now - lastLeftPress) < WINDOW and (now - lastSquarePress) < WINDOW then
+		game:GetService("Players").LocalPlayer:Kick("You left the game.")
+	end
+end
+
+game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+
+	if input.KeyCode == Enum.KeyCode.DPadLeft then
+		lastLeftPress = os.clock()
+		tryLeave()
+
+	elseif input.KeyCode == Enum.KeyCode.ButtonX then -- Square
+		lastSquarePress = os.clock()
+		tryLeave()
+	end
+end)
+
+-------------------------------------------------
 -- RUN
 -------------------------------------------------
 setup()
