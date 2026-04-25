@@ -94,7 +94,7 @@ local function updateCrosshairColor(color)
 		part.BackgroundColor3 = color
 	end
 end
-end
+
 -------------------------------------------------
 -- 🎨 UI
 -------------------------------------------------
