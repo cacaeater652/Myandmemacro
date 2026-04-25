@@ -273,34 +273,56 @@ end, false, Enum.KeyCode.ButtonY)
 end
 
 -------------------------------------------------
--- 🎮 DOUBLE TAP LEAVE (DPAD LEFT + SQUARE)
+-- 🎮 X BUTTON SYSTEM
+-- Tap once = Reset
+-- Double tap = Leave game
 -------------------------------------------------
 
-local lastLeftPress = 0
-local lastSquarePress = 0
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 
-local WINDOW = 0.5 -- time window for double tap
+local player = Players.LocalPlayer
 
-local function tryLeave()
-	local now = os.clock()
+local lastPress = 0
+local DOUBLE_WINDOW = 0.5 -- time allowed for double tap
 
-	if (now - lastLeftPress) < WINDOW and (now - lastSquarePress) < WINDOW then
-		game:GetService("Players").LocalPlayer:Kick("You left the game.")
+local function resetCharacter()
+	local char = player.Character
+	if char then
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum.Health = 0
+		end
 	end
 end
 
-game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
+local function leaveGame()
+	player:Kick()
+end
+
+UserInputService.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
+	if input.KeyCode ~= Enum.KeyCode.ButtonX then return end
 
-	if input.KeyCode == Enum.KeyCode.DPadLeft then
-		lastLeftPress = os.clock()
-		tryLeave()
+	local now = os.clock()
 
-	elseif input.KeyCode == Enum.KeyCode.ButtonX then -- Square
-		lastSquarePress = os.clock()
-		tryLeave()
+	-- double tap = leave
+	if (now - lastPress) <= DOUBLE_WINDOW then
+		leaveGame()
+		return
 	end
+
+	-- single tap = reset (only if not second tap yet)
+	lastPress = now
+
+	task.delay(DOUBLE_WINDOW, function()
+		-- if no second tap happened, treat as single press
+		if os.clock() - lastPress >= DOUBLE_WINDOW then
+			resetCharacter()
+		end
+	end)
 end)
+
 
 -------------------------------------------------
 -- RUN
