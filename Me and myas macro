@@ -264,7 +264,7 @@ end, false, Enum.KeyCode.DPadDown)
 -------------------------------------------------
 ContextActionService:BindAction("Lock", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
+		 VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
 		task.wait(speedDelay)
 		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, false, game, 0)
 	end
@@ -273,56 +273,30 @@ end, false, Enum.KeyCode.ButtonY)
 end
 
 -------------------------------------------------
--- 🎮 X BUTTON SYSTEM
--- Tap once = Reset
--- Double tap = Leave game
+-- 🎮 DOUBLE TAP LEAVE (X / SQUARE ONLY)
 -------------------------------------------------
-
-local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
 
-local lastPress = 0
-local DOUBLE_WINDOW = 0.5 -- time allowed for double tap
-
-local function resetCharacter()
-	local char = player.Character
-	if char then
-		local hum = char:FindFirstChildOfClass("Humanoid")
-		if hum then
-			hum.Health = 0
-		end
-	end
-end
-
-local function leaveGame()
-	player:Kick()
-end
+local lastXPress = 0
+local WINDOW = 0.5 -- double tap window
 
 UserInputService.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
-	if input.KeyCode ~= Enum.KeyCode.ButtonX then return end
 
-	local now = os.clock()
+	if input.KeyCode == Enum.KeyCode.ButtonX then
+		local now = os.clock()
 
-	-- double tap = leave
-	if (now - lastPress) <= DOUBLE_WINDOW then
-		leaveGame()
-		return
-	end
-
-	-- single tap = reset (only if not second tap yet)
-	lastPress = now
-
-	task.delay(DOUBLE_WINDOW, function()
-		-- if no second tap happened, treat as single press
-		if os.clock() - lastPress >= DOUBLE_WINDOW then
-			resetCharacter()
+		if (now - lastXPress) <= WINDOW then
+			task.wait(0.05)
+			player:Kick("You logged")
+		else
+			lastXPress = now
 		end
-	end)
+	end
 end)
-
 
 -------------------------------------------------
 -- RUN
@@ -332,3 +306,4 @@ setup()
 player.CharacterAdded:Connect(function()
 	task.wait(0.5)
 	setup()
+end)
