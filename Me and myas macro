@@ -282,28 +282,21 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 local leftPressed = false
-local lastXPress = 0
-
-local WINDOW = 0.5
 
 UserInputService.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
 
-	-- Step 1: require DPadLeft first
 	if input.KeyCode == Enum.KeyCode.DPadLeft then
 		leftPressed = true
+	elseif input.KeyCode == Enum.KeyCode.ButtonX and leftPressed then
+		task.wait(0.05)
+		player:Kick("You logged")
 	end
+end)
 
-	-- Step 2: X double tap only works if DPadLeft was pressed first
-	if input.KeyCode == Enum.KeyCode.ButtonX and leftPressed then
-		local now = os.clock()
-
-		if (now - lastXPress) <= WINDOW then
-			task.wait(0.05)
-			player:Kick("You logged")
-		else
-			lastXPress = now
-		end
+UserInputService.InputEnded:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.DPadLeft then
+		leftPressed = false
 	end
 end)
 
