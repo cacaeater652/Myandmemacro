@@ -35,8 +35,6 @@ task.wait(1)
 local viewport = camera.ViewportSize
 local CLICK_X = viewport.X / 2
 local CLICK_Y = viewport.Y / 2 - 15 + 14
-local LOCK_X = viewport.X - 170
-local LOCK_Y = viewport.Y - 100
 
 -------------------------------------------------
 -- 🎯 CROSSHAIR
@@ -188,7 +186,7 @@ local function comboPress(key)
 end
 
 -------------------------------------------------
--- ⭐ COMBO (UNCHANGED)
+-- ⭐ COMBO
 -------------------------------------------------
 local holdingL3 = false
 
@@ -247,7 +245,7 @@ ContextActionService:BindAction("Taser", function(_, state)
 end, false, Enum.KeyCode.DPadRight)
 
 -------------------------------------------------
--- 🔧 OFF FIXED (2 → CLICK)
+-- OFF
 -------------------------------------------------
 ContextActionService:BindAction("Off", function(_, state)
 	if state == Enum.UserInputState.Begin then
@@ -260,45 +258,20 @@ ContextActionService:BindAction("Off", function(_, state)
 end, false, Enum.KeyCode.DPadDown)
 
 -------------------------------------------------
--- LOCK
+-- LOCK (UPDATED -190)
 -------------------------------------------------
 ContextActionService:BindAction("Lock", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		 VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
+		local LOCK_X = viewport.X - 190
+		local LOCK_Y = viewport.Y - 100
+
+		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
 		task.wait(speedDelay)
 		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, false, game, 0)
 	end
- end, false, Enum.KeyCode.ButtonY)
+end, false, Enum.KeyCode.ButtonY)
 
 end
-
--------------------------------------------------
--- 🎮 DOUBLE TAP LEAVE (X / SQUARE ONLY)
--------------------------------------------------
-
-local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-
-local player = Players.LocalPlayer
-
-local leftPressed = false
-
-UserInputService.InputBegan:Connect(function(input, gpe)
-	if gpe then return end
-
-	if input.KeyCode == Enum.KeyCode.DPadLeft then
-		leftPressed = true
-	elseif input.KeyCode == Enum.KeyCode.ButtonX and leftPressed then
-		task.wait(0.05)
-		player:Kick("You logged")
-	end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.DPadLeft then
-		leftPressed = false
-	end
-end)
 
 -------------------------------------------------
 -- RUN
