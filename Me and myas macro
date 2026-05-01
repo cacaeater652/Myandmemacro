@@ -254,7 +254,6 @@ ContextActionService:BindAction("Off", function(_, state)
 		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
 		task.wait(speedDelay)
 		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
-
 		click()
 	end
 end, false, Enum.KeyCode.DPadDown)
@@ -264,39 +263,66 @@ end, false, Enum.KeyCode.DPadDown)
 -------------------------------------------------
 ContextActionService:BindAction("Lock", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		 VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
+		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
 		task.wait(speedDelay)
 		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, false, game, 0)
 	end
- end, false, Enum.KeyCode.ButtonY)
+end, false, Enum.KeyCode.ButtonY)
 
 end
 
 -------------------------------------------------
--- 🎮 DOUBLE TAP LEAVE (X / SQUARE ONLY)
+-- 🎮 LDP SYSTEM (BUMPED STABLE TIMING)
 -------------------------------------------------
 
-local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
+local lastTap = 0
+local DOUBLE_TAP_TIME = 0.6
+local debounce = false
+local leftHeld = false
 
-local player = Players.LocalPlayer
+local function tap(key)
+	VirtualInputManager:SendKeyEvent(true, key, false, game)
+	task.wait(0.03) -- bumped
+	VirtualInputManager:SendKeyEvent(false, key, false, game)
+	task.wait(0.02) -- bumped
+end
 
-local leftPressed = false
+local function runSequence()
+	if debounce then return end
+	debounce = true
+
+	tap(Enum.KeyCode.Escape)
+	tap(Enum.KeyCode.R)
+	tap(Enum.KeyCode.Return)
+
+	task.wait(0.05)
+	debounce = false
+end
 
 UserInputService.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
 
 	if input.KeyCode == Enum.KeyCode.DPadLeft then
-		leftPressed = true
-	elseif input.KeyCode == Enum.KeyCode.ButtonX and leftPressed then
-		task.wait(0.05)
-		player:Kick("You logged")
+		leftHeld = true
+
+		local now = os.clock()
+		if (now - lastTap) <= DOUBLE_TAP_TIME then
+			runSequence()
+			lastTap = 0
+		else
+			lastTap = now
+		end
+
+	elseif input.KeyCode == Enum.KeyCode.ButtonX then
+		if leftHeld then
+			player:Kick("You logged")
+		end
 	end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.DPadLeft then
-		leftPressed = false
+		leftHeld = false
 	end
 end)
 
