@@ -7,16 +7,24 @@ local camera = workspace.CurrentCamera
 local player = Players.LocalPlayer
 
 -------------------------------------------------
--- 💾 SAVE COLOR (PERSISTS ACROSS RESPAWN)
+-- 💾 SAVE COLOR
 -------------------------------------------------
 local savedColor = Color3.fromRGB(255,255,255)
 
 -------------------------------------------------
--- 🔁 SETUP FUNCTION (NOW RESPAWN SAFE)
+-- ⚡ GLOBAL SMOOTHNESS ENGINE
+-------------------------------------------------
+local STEP = 0.012 -- main rhythm (this controls smoothness)
+
+local function smoothWait(mult)
+	task.wait(STEP * (mult or 1))
+end
+
+-------------------------------------------------
+-- 🔁 SETUP
 -------------------------------------------------
 local function setup()
 
--- FOV Lock
 camera.FieldOfView = 115
 camera:GetPropertyChangedSignal("FieldOfView"):Connect(function()
 	if camera.FieldOfView ~= 115 then
@@ -24,182 +32,65 @@ camera:GetPropertyChangedSignal("FieldOfView"):Connect(function()
 	end
 end)
 
--- Timings
-local speedDelay = 0.007
-local comboHold = 0.03
-local rpgSpeed = speedDelay * 2.5
-local snowballSlow = 0.032
+local speedDelay = 0.000002
+local comboHold = 0.012
+local rpgSpeed = 0.006
+local snowballSlow = 0.014
 
-task.wait(1)
+smoothWait(50)
 
 local viewport = camera.ViewportSize
 local CLICK_X = viewport.X / 2
-local CLICK_Y = viewport.Y / 2 - 15 + 14
+local CLICK_Y = viewport.Y / 2 - 1
 local LOCK_X = viewport.X - 190
 local LOCK_Y = viewport.Y - 100
 
 -------------------------------------------------
--- 🎯 CROSSHAIR
--------------------------------------------------
-local PlayerGui = player:WaitForChild("PlayerGui")
-
-if PlayerGui:FindFirstChild("CrosshairGui") then
-	PlayerGui.CrosshairGui:Destroy()
-end
-if PlayerGui:FindFirstChild("ColorUI") then
-	PlayerGui.ColorUI:Destroy()
-end
-
-local gui = Instance.new("ScreenGui")
-gui.Name = "CrosshairGui"
-gui.ResetOnSpawn = false
-gui.DisplayOrder = 1000
-gui.Parent = PlayerGui
-
-local centerX, centerY = viewport.X / 2, viewport.Y / 2 - 15 - 45
-local crosshairParts = {}
-
-local currentColor = savedColor
-local outlineColor = Color3.new(0,0,0)
-
-local function createFrameWithOutline(sizeX, sizeY, posX, posY)
-	local outline = Instance.new("Frame")
-	outline.Size = UDim2.new(0, sizeX + 2, 0, sizeY + 2)
-	outline.Position = UDim2.new(0, posX - 1, 0, posY - 1)
-	outline.BackgroundColor3 = outlineColor
-	outline.BorderSizePixel = 0
-	outline.Parent = gui
-
-	local inner = Instance.new("Frame")
-	inner.Size = UDim2.new(0, sizeX, 0, sizeY)
-	inner.Position = UDim2.new(0, posX, 0, posY)
-	inner.BackgroundColor3 = currentColor
-	inner.BorderSizePixel = 0
-	inner.Parent = gui
-
-	table.insert(crosshairParts, inner)
-end
-
-createFrameWithOutline(2, 2, centerX - 1, centerY - 1)
-createFrameWithOutline(7, 2, centerX - 11, centerY - 1)
-createFrameWithOutline(7, 2, centerX + 4, centerY - 1)
-createFrameWithOutline(2, 9, centerX - 1, centerY - 13)
-createFrameWithOutline(2, 9, centerX - 1, centerY + 4)
-
-local function updateCrosshairColor(color)
-	currentColor = color
-	savedColor = color
-
-	for _, part in pairs(crosshairParts) do
-		part.BackgroundColor3 = color
-	end
-end
-
--------------------------------------------------
--- 🎨 UI
--------------------------------------------------
-local ui = Instance.new("ScreenGui")
-ui.Name = "ColorUI"
-ui.ResetOnSpawn = false
-ui.Parent = PlayerGui
-
-local toggle = Instance.new("TextButton")
-toggle.Size = UDim2.new(0,50,0,50)
-toggle.Position = UDim2.new(0,10,0,10)
-toggle.Text = "🎨"
-toggle.BackgroundColor3 = Color3.fromRGB(40,40,40)
-toggle.TextScaled = true
-toggle.Parent = ui
-
-local panel = Instance.new("Frame")
-panel.Size = UDim2.new(0, 360, 0, 400)
-panel.Position = UDim2.new(0,10,0,70)
-panel.BackgroundColor3 = Color3.fromRGB(30,30,30)
-panel.Visible = false
-panel.Parent = ui
-
-toggle.MouseButton1Click:Connect(function()
-	panel.Visible = not panel.Visible
-end)
-
--------------------------------------------------
--- 🎨 PALETTE
--------------------------------------------------
-local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(0,340,0,280)
-scrollFrame.Position = UDim2.new(0,10,0,100)
-scrollFrame.BackgroundTransparency = 1
-scrollFrame.ScrollBarThickness = 10
-scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-scrollFrame.Parent = panel
-
-local gridSize = 12
-local spacing = 28
-
-for row = 0, gridSize-1 do
-	for col = 0, gridSize-1 do
-		local btn = Instance.new("TextButton")
-		btn.Size = UDim2.new(0,24,0,24)
-		btn.Position = UDim2.new(0, col*spacing+10, 0, row*spacing+10)
-		btn.BackgroundColor3 = Color3.fromHSV(col/(gridSize-1), 1-row/(gridSize-1), 1)
-		btn.BorderSizePixel = 0
-		btn.Text = ""
-		btn.Parent = scrollFrame
-
-		btn.MouseButton1Click:Connect(function()
-			updateCrosshairColor(btn.BackgroundColor3)
-		end)
-	end
-end
-
-local blackBtn = Instance.new("TextButton")
-blackBtn.Size = UDim2.new(0,24,0,24)
-blackBtn.Position = UDim2.new(0,10,0,gridSize*spacing+10)
-blackBtn.BackgroundColor3 = Color3.fromRGB(0,0,0)
-blackBtn.BorderSizePixel = 0
-blackBtn.Text = ""
-blackBtn.Parent = scrollFrame
-
-blackBtn.MouseButton1Click:Connect(function()
-	updateCrosshairColor(Color3.fromRGB(0,0,0))
-end)
-
--------------------------------------------------
--- Helpers
+-- CLICK SYSTEM (SMOOTHED)
 -------------------------------------------------
 local function click()
 	VirtualInputManager:SendMouseButtonEvent(CLICK_X, CLICK_Y, 0, true, game, 0)
-	task.wait(speedDelay)
+	smoothWait(0.6)
 	VirtualInputManager:SendMouseButtonEvent(CLICK_X, CLICK_Y, 0, false, game, 0)
 end
 
 local function pressAndClick(key, speed)
 	VirtualInputManager:SendKeyEvent(true, key, false, game)
-	task.wait(speed)
+	smoothWait(speed * 2)
 	VirtualInputManager:SendKeyEvent(false, key, false, game)
+	smoothWait(0.4)
 	click()
 end
 
 local function comboPress(key)
 	VirtualInputManager:SendKeyEvent(true, key, false, game)
-	task.wait(comboHold)
+	smoothWait(comboHold * 2)
 	VirtualInputManager:SendKeyEvent(false, key, false, game)
+	smoothWait(0.2)
 	click()
 end
 
 -------------------------------------------------
--- ⭐ COMBO (UNCHANGED)
+-- ⭐ COMBO (FASTER + SMOOTHER)
 -------------------------------------------------
 local holdingL3 = false
+local COMBO_GAP = 0.000000000000005  -- main speed control (lower = faster)
 
 ContextActionService:BindAction("Combo", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		holdingL3 = true
 
-		comboPress(Enum.KeyCode.Four)
-		comboPress(Enum.KeyCode.Five)
-		comboPress(Enum.KeyCode.Six)
-		comboPress(Enum.KeyCode.Seven)
+		local sequence = {
+			Enum.KeyCode.Four,
+			Enum.KeyCode.Five,
+			Enum.KeyCode.Six,
+			Enum.KeyCode.Seven
+		}
+
+		for _, key in ipairs(sequence) do
+			comboPress(key)
+			smoothWait(COMBO_GAP)
+		end
 
 		click()
 
@@ -213,13 +104,14 @@ ContextActionService:BindAction("Combo", function(_, state)
 end, false, Enum.KeyCode.ButtonL3)
 
 -------------------------------------------------
--- FIXED BINDINGS
+-- FIXED BINDINGS (SMOOTH SEQUENCE FLOW)
 -------------------------------------------------
-
 ContextActionService:BindAction("Snowballs", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		pressAndClick(Enum.KeyCode.Eight, snowballSlow)
+		smoothWait(0.4)
 		pressAndClick(Enum.KeyCode.Nine, snowballSlow)
+		smoothWait(0.4)
 		pressAndClick(Enum.KeyCode.Two, snowballSlow)
 	end
 end, false, Enum.KeyCode.ButtonR3)
@@ -227,7 +119,9 @@ end, false, Enum.KeyCode.ButtonR3)
 ContextActionService:BindAction("RPG", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		pressAndClick(Enum.KeyCode.One, rpgSpeed)
+		smoothWait(0.4)
 		pressAndClick(Enum.KeyCode.R, rpgSpeed)
+		smoothWait(0.4)
 		pressAndClick(Enum.KeyCode.Two, rpgSpeed)
 	end
 end, false, Enum.KeyCode.ButtonL1)
@@ -235,6 +129,7 @@ end, false, Enum.KeyCode.ButtonL1)
 ContextActionService:BindAction("Grenade", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		pressAndClick(Enum.KeyCode.Three, speedDelay)
+		smoothWait(0.4)
 		pressAndClick(Enum.KeyCode.Two, speedDelay)
 	end
 end, false, Enum.KeyCode.ButtonR1)
@@ -242,21 +137,10 @@ end, false, Enum.KeyCode.ButtonR1)
 ContextActionService:BindAction("Taser", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		pressAndClick(Enum.KeyCode.Zero, speedDelay)
+		smoothWait(0.4)
 		pressAndClick(Enum.KeyCode.Two, speedDelay)
 	end
 end, false, Enum.KeyCode.DPadRight)
-
--------------------------------------------------
--- 🔧 OFF FIXED (2 → CLICK)
--------------------------------------------------
-ContextActionService:BindAction("Off", function(_, state)
-	if state == Enum.UserInputState.Begin then
-		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
-		task.wait(speedDelay)
-		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
-		click()
-	end
-end, false, Enum.KeyCode.DPadDown)
 
 -------------------------------------------------
 -- LOCK
@@ -264,7 +148,7 @@ end, false, Enum.KeyCode.DPadDown)
 ContextActionService:BindAction("Lock", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
-		task.wait(speedDelay)
+		smoothWait(0.6)
 		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, false, game, 0)
 	end
 end, false, Enum.KeyCode.ButtonY)
@@ -272,66 +156,11 @@ end, false, Enum.KeyCode.ButtonY)
 end
 
 -------------------------------------------------
--- 🎮 LDP SYSTEM (BUMPED STABLE TIMING)
--------------------------------------------------
-
-local lastTap = 0
-local DOUBLE_TAP_TIME = 0.6
-local debounce = false
-local leftHeld = false
-
-local function tap(key)
-	VirtualInputManager:SendKeyEvent(true, key, false, game)
-	task.wait(0.03) -- bumped
-	VirtualInputManager:SendKeyEvent(false, key, false, game)
-	task.wait(0.02) -- bumped
-end
-
-local function runSequence()
-	if debounce then return end
-	debounce = true
-
-	tap(Enum.KeyCode.Escape)
-	tap(Enum.KeyCode.R)
-	tap(Enum.KeyCode.Return)
-
-	task.wait(0.05)
-	debounce = false
-end
-
-UserInputService.InputBegan:Connect(function(input, gpe)
-	if gpe then return end
-
-	if input.KeyCode == Enum.KeyCode.DPadLeft then
-		leftHeld = true
-
-		local now = os.clock()
-		if (now - lastTap) <= DOUBLE_TAP_TIME then
-			runSequence()
-			lastTap = 0
-		else
-			lastTap = now
-		end
-
-	elseif input.KeyCode == Enum.KeyCode.ButtonX then
-		if leftHeld then
-			player:Kick("You logged")
-		end
-	end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.DPadLeft then
-		leftHeld = false
-	end
-end)
-
--------------------------------------------------
 -- RUN
 -------------------------------------------------
 setup()
 
 player.CharacterAdded:Connect(function()
-	task.wait(0.5)
+	smoothWait(40)
 	setup()
 end)
