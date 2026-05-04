@@ -1,5 +1,3 @@
-Personal macro
-
 local Players = game:GetService("Players")
 local ContextActionService = game:GetService("ContextActionService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
@@ -27,7 +25,7 @@ camera:GetPropertyChangedSignal("FieldOfView"):Connect(function()
 end)
 
 -- Timings
-local speedDelay = 0.005
+local speedDelay = 0.0000000000000002
 local comboHold = 0.03
 local rpgSpeed = speedDelay * 2.5
 local snowballSlow = 0.032
