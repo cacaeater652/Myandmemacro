@@ -1,3 +1,4 @@
+
 local Players = game:GetService("Players")
 local ContextActionService = game:GetService("ContextActionService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
@@ -188,7 +189,7 @@ local function comboPress(key)
 end
 
 -------------------------------------------------
--- ⭐ COMBO (UNCHANGED)
+-- ⭐ COMBO (UNCHANGED) 
 -------------------------------------------------
 local holdingL3 = false
 
@@ -197,14 +198,14 @@ ContextActionService:BindAction("Combo", function(_, state)
 		holdingL3 = true
 
 		comboPress(Enum.KeyCode.Four)
-		comboPress(Enum.KeyCode.Five)
-		comboPress(Enum.KeyCode.Six)
+		comboPress(Enum.KeyCode.Three)
 		comboPress(Enum.KeyCode.Seven)
+		comboPress(Enum.KeyCode.One)
 
 		click()
 
 		if not holdingL3 then
-			comboPress(Enum.KeyCode.Two)
+			comboPress(Enum.KeyCode.Five)
 		end
 
 	elseif state == Enum.UserInputState.End then
@@ -220,40 +221,40 @@ ContextActionService:BindAction("Snowballs", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		pressAndClick(Enum.KeyCode.Eight, snowballSlow)
 		pressAndClick(Enum.KeyCode.Nine, snowballSlow)
-		pressAndClick(Enum.KeyCode.Two, snowballSlow)
+		pressAndClick(Enum.KeyCode.Five, snowballSlow)
 	end
 end, false, Enum.KeyCode.ButtonR3)
 
 ContextActionService:BindAction("RPG", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		pressAndClick(Enum.KeyCode.One, rpgSpeed)
-		pressAndClick(Enum.KeyCode.R, rpgSpeed)
 		pressAndClick(Enum.KeyCode.Two, rpgSpeed)
+		pressAndClick(Enum.KeyCode.R, rpgSpeed)
+		pressAndClick(Enum.KeyCode.Five, rpgSpeed)
 	end
 end, false, Enum.KeyCode.ButtonL1)
 
 ContextActionService:BindAction("Grenade", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		pressAndClick(Enum.KeyCode.Three, speedDelay)
-		pressAndClick(Enum.KeyCode.Two, speedDelay)
+		pressAndClick(Enum.KeyCode.Six, speedDelay)
+		pressAndClick(Enum.KeyCode.Five, speedDelay)
 	end
 end, false, Enum.KeyCode.ButtonR1)
 
 ContextActionService:BindAction("Taser", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		pressAndClick(Enum.KeyCode.Zero, speedDelay)
-		pressAndClick(Enum.KeyCode.Two, speedDelay)
+		pressAndClick(Enum.KeyCode.Five, speedDelay)
 	end
 end, false, Enum.KeyCode.DPadRight)
 
 -------------------------------------------------
--- 🔧 OFF FIXED (2 → CLICK)
+-- 🔧 OFF FIXED (5 → CLICK)
 -------------------------------------------------
 ContextActionService:BindAction("Off", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
+		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Five, false, game)
 		task.wait(speedDelay)
-		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
+		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Five, false, game)
 		click()
 	end
 end, false, Enum.KeyCode.DPadDown)
