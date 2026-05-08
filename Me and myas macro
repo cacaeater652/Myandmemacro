@@ -188,41 +188,63 @@ local function comboPress(key)
 end
 
 -------------------------------------------------
--- ⭐ ULTRA SMOOTH COMBO (NO CHAIN DELAY)
+-- ⭐ COMBO (UNCHANGED) 
 -------------------------------------------------
 local holdingL3 = false
-
-local function instantKeyPress(key)
-	VirtualInputManager:SendKeyEvent(true, key, false, game)
-	VirtualInputManager:SendKeyEvent(false, key, false, game)
-end
-
-local function instantClick()
-	VirtualInputManager:SendMouseButtonEvent(CLICK_X, CLICK_Y, 0, true, game, 0)
-	VirtualInputManager:SendMouseButtonEvent(CLICK_X, CLICK_Y, 0, false, game, 0)
-end
 
 ContextActionService:BindAction("Combo", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		holdingL3 = true
 
-		-- fire everything in the SAME frame
-		instantKeyPress(Enum.KeyCode.Four)
-		instantKeyPress(Enum.KeyCode.Five)
-		instantKeyPress(Enum.KeyCode.Six)
-		instantKeyPress(Enum.KeyCode.Seven)
+		comboPress(Enum.KeyCode.Four)
+		comboPress(Enum.KeyCode.Five)
+		comboPress(Enum.KeyCode.Six)
+		comboPress(Enum.KeyCode.Seven)
 
-		instantClick()
+		click()
 
-		-- optional follow-up (no delay)
 		if not holdingL3 then
-			instantKeyPress(Enum.KeyCode.Two)
+			comboPress(Enum.KeyCode.Two)
 		end
 
 	elseif state == Enum.UserInputState.End then
 		holdingL3 = false
 	end
 end, false, Enum.KeyCode.ButtonL3)
+
+-------------------------------------------------
+-- FIXED BINDINGS
+-------------------------------------------------
+
+ContextActionService:BindAction("Snowballs", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		pressAndClick(Enum.KeyCode.Eight, snowballSlow)
+		pressAndClick(Enum.KeyCode.Nine, snowballSlow)
+		pressAndClick(Enum.KeyCode.Two, snowballSlow)
+	end
+end, false, Enum.KeyCode.ButtonR3)
+
+ContextActionService:BindAction("RPG", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		pressAndClick(Enum.KeyCode.One, rpgSpeed)
+		pressAndClick(Enum.KeyCode.R, rpgSpeed)
+		pressAndClick(Enum.KeyCode.Two, rpgSpeed)
+	end
+end, false, Enum.KeyCode.ButtonL1)
+
+ContextActionService:BindAction("Grenade", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		pressAndClick(Enum.KeyCode.Three, speedDelay)
+		pressAndClick(Enum.KeyCode.Two, speedDelay)
+	end
+end, false, Enum.KeyCode.ButtonR1)
+
+ContextActionService:BindAction("Taser", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		pressAndClick(Enum.KeyCode.Zero, speedDelay)
+		pressAndClick(Enum.KeyCode.Two, speedDelay)
+	end
+end, false, Enum.KeyCode.DPadRight)
 
 -------------------------------------------------
 -- 🔧 OFF FIXED (2 → CLICK)
