@@ -35,7 +35,7 @@ task.wait(1)
 local viewport = camera.ViewportSize
 local CLICK_X = viewport.X / 2
 local CLICK_Y = viewport.Y / 2 - 15 + 14
-local LOCK_X = viewport.X - 190
+local LOCK_X = viewport.X - 400
 local LOCK_Y = viewport.Y - 100
 
 -------------------------------------------------
@@ -188,7 +188,7 @@ local function comboPress(key)
 end
 
 -------------------------------------------------
--- ⭐ COMBO (UNCHANGED) 
+-- ⭐ COMBO
 -------------------------------------------------
 local holdingL3 = false
 
@@ -196,10 +196,10 @@ ContextActionService:BindAction("Combo", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		holdingL3 = true
 
-		comboPress(Enum.KeyCode.Four)
-		comboPress(Enum.KeyCode.Five)
 		comboPress(Enum.KeyCode.Six)
 		comboPress(Enum.KeyCode.Seven)
+		comboPress(Enum.KeyCode.One)
+		comboPress(Enum.KeyCode.Five)
 
 		click()
 
@@ -216,17 +216,28 @@ end, false, Enum.KeyCode.ButtonL3)
 -- FIXED BINDINGS
 -------------------------------------------------
 
+local holdingR3 = false
+
 ContextActionService:BindAction("Snowballs", function(_, state)
 	if state == Enum.UserInputState.Begin then
+		holdingR3 = true
+
 		pressAndClick(Enum.KeyCode.Eight, snowballSlow)
 		pressAndClick(Enum.KeyCode.Nine, snowballSlow)
+
+		if not holdingR3 then
+			pressAndClick(Enum.KeyCode.Two, snowballSlow)
+		end
+
+	elseif state == Enum.UserInputState.End then
+		holdingR3 = false
 		pressAndClick(Enum.KeyCode.Two, snowballSlow)
 	end
-end, false, Enum.KeyCode.ButtonR3)
+end, false, Enum.KeyCode.ButtonR3) 
 
 ContextActionService:BindAction("RPG", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		pressAndClick(Enum.KeyCode.One, rpgSpeed)
+		pressAndClick(Enum.KeyCode.Four, rpgSpeed)
 		pressAndClick(Enum.KeyCode.R, rpgSpeed)
 		pressAndClick(Enum.KeyCode.Two, rpgSpeed)
 	end
@@ -234,20 +245,20 @@ end, false, Enum.KeyCode.ButtonL1)
 
 ContextActionService:BindAction("Grenade", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		pressAndClick(Enum.KeyCode.Three, speedDelay)
+		pressAndClick(Enum.KeyCode.Zero, speedDelay)
 		pressAndClick(Enum.KeyCode.Two, speedDelay)
 	end
 end, false, Enum.KeyCode.ButtonR1)
 
 ContextActionService:BindAction("Taser", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		pressAndClick(Enum.KeyCode.Zero, speedDelay)
-		pressAndClick(Enum.KeyCode.Two, speedDelay)
+		pressAndClick(Enum.KeyCode.Three, speedDelay)
+		
 	end
 end, false, Enum.KeyCode.DPadRight)
 
 -------------------------------------------------
--- 🔧 OFF FIXED (2 → CLICK)
+-- 🔧 OFF FIXED
 -------------------------------------------------
 ContextActionService:BindAction("Off", function(_, state)
 	if state == Enum.UserInputState.Begin then
@@ -261,18 +272,19 @@ end, false, Enum.KeyCode.DPadDown)
 -------------------------------------------------
 -- LOCK
 -------------------------------------------------
+
 ContextActionService:BindAction("Lock", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
+		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftShift, false, game)
 		task.wait(speedDelay)
-		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, false, game, 0)
+		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftShift, false, game)
 	end
 end, false, Enum.KeyCode.ButtonY)
 
 end
 
 -------------------------------------------------
--- 🎮 LDP SYSTEM (BUMPED STABLE TIMING)
+-- 🎮 LDP SYSTEM (YOUR ADDED SYSTEM)
 -------------------------------------------------
 
 local lastTap = 0
@@ -282,9 +294,9 @@ local leftHeld = false
 
 local function tap(key)
 	VirtualInputManager:SendKeyEvent(true, key, false, game)
-	task.wait(0.03) -- bumped
+	task.wait(0.03)
 	VirtualInputManager:SendKeyEvent(false, key, false, game)
-	task.wait(0.02) -- bumped
+	task.wait(0.02)
 end
 
 local function runSequence()
@@ -304,6 +316,9 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 
 	if input.KeyCode == Enum.KeyCode.DPadLeft then
 		leftHeld = true
+
+		-- 🔄 RE-RUN SETUP ON PRESS
+		setup()
 
 		local now = os.clock()
 		if (now - lastTap) <= DOUBLE_TAP_TIME then
