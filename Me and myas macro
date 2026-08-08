@@ -222,18 +222,18 @@ ContextActionService:BindAction("Snowballs", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		holdingR3 = true
 
-		pressAndClick(Enum.KeyCode.Eight, snowballSlow)
-		pressAndClick(Enum.KeyCode.Nine, snowballSlow)
+		comboPress(Enum.KeyCode.Nine)
+		comboPress(Enum.KeyCode.Eight)
+		click()
 
 		if not holdingR3 then
-			pressAndClick(Enum.KeyCode.Two, snowballSlow)
+			comboPress(Enum.KeyCode.Two)
 		end
 
 	elseif state == Enum.UserInputState.End then
 		holdingR3 = false
-		pressAndClick(Enum.KeyCode.Two, snowballSlow)
 	end
-end, false, Enum.KeyCode.ButtonR3) 
+end, false, Enum.KeyCode.ButtonR3)
 
 ContextActionService:BindAction("RPG", function(_, state)
 	if state == Enum.UserInputState.Begin then
