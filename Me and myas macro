@@ -35,7 +35,7 @@ task.wait(1)
 local viewport = camera.ViewportSize
 local CLICK_X = viewport.X / 2
 local CLICK_Y = viewport.Y / 2 - 15 + 14
-local LOCK_X = viewport.X - 350
+local LOCK_X = viewport.X - 300
 local LOCK_Y = viewport.Y - 100
 
 -------------------------------------------------
