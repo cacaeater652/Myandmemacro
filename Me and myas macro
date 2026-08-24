@@ -26,7 +26,7 @@ end)
 
 -- Timings
 local speedDelay = 0.0000000000000002
-local comboHold = 0.03
+local comboHold = 0.0000000000000001
 local rpgSpeed = speedDelay * 2.5
 local snowballSlow = 0.032
 
@@ -196,8 +196,8 @@ ContextActionService:BindAction("Combo", function(_, state)
 	if state == Enum.UserInputState.Begin then
 		holdingL3 = true
 
-		comboPress(Enum.KeyCode.Six)
 		comboPress(Enum.KeyCode.Seven)
+		comboPress(Enum.KeyCode.Six)
 		comboPress(Enum.KeyCode.One)
 		comboPress(Enum.KeyCode.Five)
 
@@ -216,22 +216,11 @@ end, false, Enum.KeyCode.ButtonL3)
 -- FIXED BINDINGS
 -------------------------------------------------
 
-local holdingR3 = false
-
 ContextActionService:BindAction("Snowballs", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		holdingR3 = true
-
-		comboPress(Enum.KeyCode.Nine)
-		comboPress(Enum.KeyCode.Eight)
-		click()
-
-		if not holdingR3 then
-			comboPress(Enum.KeyCode.Two)
-		end
-
-	elseif state == Enum.UserInputState.End then
-		holdingR3 = false
+		pressAndClick(Enum.KeyCode.Eight, snowballSlow)
+		pressAndClick(Enum.KeyCode.Nine, snowballSlow)
+		pressAndClick(Enum.KeyCode.Two, snowballSlow)
 	end
 end, false, Enum.KeyCode.ButtonR3)
 
@@ -272,12 +261,11 @@ end, false, Enum.KeyCode.DPadDown)
 -------------------------------------------------
 -- LOCK
 -------------------------------------------------
-
 ContextActionService:BindAction("Lock", function(_, state)
 	if state == Enum.UserInputState.Begin then
-		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftShift, false, game)
+		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
 		task.wait(speedDelay)
-		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftShift, false, game)
+		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, false, game, 0)
 	end
 end, false, Enum.KeyCode.ButtonY)
 
