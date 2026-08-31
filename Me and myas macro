@@ -2,53 +2,173 @@ local Players = game:GetService("Players")
 local ContextActionService = game:GetService("ContextActionService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local UserInputService = game:GetService("UserInputService")
-local camera = workspace.CurrentCamera
 
+local camera = workspace.CurrentCamera
 local player = Players.LocalPlayer
 
 -------------------------------------------------
--- 💾 SAVE COLOR (PERSISTS ACROSS RESPAWN)
+-- 🔄 GLOBAL CLEANUP
 -------------------------------------------------
+
+local shared = getgenv and getgenv() or _G
+
+-- Stop previous grenade system
+if shared.GrenadeSystemRunning then
+	shared.GrenadeSystemRunning = false
+end
+
+-- Disconnect previous RPG listener
+if shared.RPGConnection then
+	pcall(function()
+		shared.RPGConnection:Disconnect()
+	end)
+	shared.RPGConnection = nil
+end
+
+-- Disconnect previous Taser listener
+if shared.TaserConnection then
+	pcall(function()
+		shared.TaserConnection:Disconnect()
+	end)
+	shared.TaserConnection = nil
+end
+
+-- Disconnect previous FOV connection
+if shared.FOVConnection then
+	pcall(function()
+		shared.FOVConnection:Disconnect()
+	end)
+	shared.FOVConnection = nil
+end
+
+-- Remove old grenade blocker
+pcall(function()
+	ContextActionService:UnbindAction("GrenadeR1Block")
+end)
+
+-------------------------------------------------
+-- 💾 SAVE COLOR
+-------------------------------------------------
+
 local savedColor = Color3.fromRGB(255,255,255)
 
 -------------------------------------------------
--- 🔁 SETUP FUNCTION (NOW RESPAWN SAFE)
+-- 💣 START GRENADE SYSTEM
 -------------------------------------------------
-local function setup()
 
--- FOV Lock
-camera.FieldOfView = 115
-camera:GetPropertyChangedSignal("FieldOfView"):Connect(function()
-	if camera.FieldOfView ~= 115 then
-		camera.FieldOfView = 115
-	end
-end)
+shared.GrenadeSystemRunning = true
 
--- Timings
-local speedDelay = 0.0000000000000002
-local comboHold = 0.0000000000000001
+-------------------------------------------------
+-- 🔧 TIMINGS
+-------------------------------------------------
+
+local speedDelay = 0.007
+local comboHold = 0.0007
 local rpgSpeed = speedDelay * 2.5
 local snowballSlow = 0.032
 
-task.wait(1)
+-------------------------------------------------
+-- 🖱️ CLICK
+-------------------------------------------------
 
-local viewport = camera.ViewportSize
-local CLICK_X = viewport.X / 2
-local CLICK_Y = viewport.Y / 2 - 15 + 14
-local LOCK_X = viewport.X - 100
-local LOCK_Y = viewport.Y - 100
+local function click()
+
+	local viewport = camera.ViewportSize
+
+	local CLICK_X = viewport.X / 2
+	local CLICK_Y = viewport.Y / 2 - 15 + 14
+
+	VirtualInputManager:SendMouseButtonEvent(
+		CLICK_X,
+		CLICK_Y,
+		0,
+		true,
+		game,
+		0
+	)
+
+	task.wait(speedDelay)
+
+	VirtualInputManager:SendMouseButtonEvent(
+		CLICK_X,
+		CLICK_Y,
+		0,
+		false,
+		game,
+		0
+	)
+
+end
+
+-------------------------------------------------
+-- ⌨️ PRESS + CLICK
+-------------------------------------------------
+
+local function pressAndClick(key, speed)
+
+	VirtualInputManager:SendKeyEvent(
+		true,
+		key,
+		false,
+		game
+	)
+
+	task.wait(speed)
+
+	VirtualInputManager:SendKeyEvent(
+		false,
+		key,
+		false,
+		game
+	)
+
+	click()
+
+end
+
+-------------------------------------------------
+-- ⭐ COMBO PRESS
+-------------------------------------------------
+
+local function comboPress(key)
+
+	VirtualInputManager:SendKeyEvent(
+		true,
+		key,
+		false,
+		game
+	)
+
+	task.wait(comboHold)
+
+	VirtualInputManager:SendKeyEvent(
+		false,
+		key,
+		false,
+		game
+	)
+
+	click()
+
+end
 
 -------------------------------------------------
 -- 🎯 CROSSHAIR
 -------------------------------------------------
+
 local PlayerGui = player:WaitForChild("PlayerGui")
 
 if PlayerGui:FindFirstChild("CrosshairGui") then
 	PlayerGui.CrosshairGui:Destroy()
 end
+
 if PlayerGui:FindFirstChild("ColorUI") then
 	PlayerGui.ColorUI:Destroy()
 end
+
+task.wait(1)
+
+local viewport = camera.ViewportSize
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "CrosshairGui"
@@ -56,285 +176,602 @@ gui.ResetOnSpawn = false
 gui.DisplayOrder = 1000
 gui.Parent = PlayerGui
 
-local centerX, centerY = viewport.X / 2, viewport.Y / 2 - 15 - 45
+local centerX = viewport.X / 2
+local centerY = viewport.Y / 2 - 15 - 45
+
 local crosshairParts = {}
 
 local currentColor = savedColor
 local outlineColor = Color3.new(0,0,0)
 
-local function createFrameWithOutline(sizeX, sizeY, posX, posY)
+local function createFrameWithOutline(
+	sizeX,
+	sizeY,
+	posX,
+	posY
+)
+
 	local outline = Instance.new("Frame")
-	outline.Size = UDim2.new(0, sizeX + 2, 0, sizeY + 2)
-	outline.Position = UDim2.new(0, posX - 1, 0, posY - 1)
+
+	outline.Size = UDim2.new(
+		0,
+		sizeX + 2,
+		0,
+		sizeY + 2
+	)
+
+	outline.Position = UDim2.new(
+		0,
+		posX - 1,
+		0,
+		posY - 1
+	)
+
 	outline.BackgroundColor3 = outlineColor
 	outline.BorderSizePixel = 0
 	outline.Parent = gui
 
 	local inner = Instance.new("Frame")
-	inner.Size = UDim2.new(0, sizeX, 0, sizeY)
-	inner.Position = UDim2.new(0, posX, 0, posY)
+
+	inner.Size = UDim2.new(
+		0,
+		sizeX,
+		0,
+		sizeY
+	)
+
+	inner.Position = UDim2.new(
+		0,
+		posX,
+		0,
+		posY
+	)
+
 	inner.BackgroundColor3 = currentColor
 	inner.BorderSizePixel = 0
 	inner.Parent = gui
 
-	table.insert(crosshairParts, inner)
+	table.insert(
+		crosshairParts,
+		inner
+	)
+
 end
 
-createFrameWithOutline(2, 2, centerX - 1, centerY - 1)
-createFrameWithOutline(7, 2, centerX - 11, centerY - 1)
-createFrameWithOutline(7, 2, centerX + 4, centerY - 1)
-createFrameWithOutline(2, 9, centerX - 1, centerY - 13)
-createFrameWithOutline(2, 9, centerX - 1, centerY + 4)
+createFrameWithOutline(
+	2,
+	2,
+	centerX - 1,
+	centerY - 1
+)
+
+createFrameWithOutline(
+	7,
+	2,
+	centerX - 11,
+	centerY - 1
+)
+
+createFrameWithOutline(
+	7,
+	2,
+	centerX + 4,
+	centerY - 1
+)
+
+createFrameWithOutline(
+	2,
+	9,
+	centerX - 1,
+	centerY - 13
+)
+
+createFrameWithOutline(
+	2,
+	9,
+	centerX - 1,
+	centerY + 4
+)
+
+-------------------------------------------------
+-- 🎨 COLOR HELPER
+-------------------------------------------------
 
 local function updateCrosshairColor(color)
+
 	currentColor = color
 	savedColor = color
 
 	for _, part in pairs(crosshairParts) do
 		part.BackgroundColor3 = color
 	end
+
 end
 
 -------------------------------------------------
--- 🎨 UI
+-- 🧹 CLEAN NORMAL ACTIONS
 -------------------------------------------------
-local ui = Instance.new("ScreenGui")
-ui.Name = "ColorUI"
-ui.ResetOnSpawn = false
-ui.Parent = PlayerGui
 
-local toggle = Instance.new("TextButton")
-toggle.Size = UDim2.new(0,50,0,50)
-toggle.Position = UDim2.new(0,10,0,10)
-toggle.Text = "🎨"
-toggle.BackgroundColor3 = Color3.fromRGB(40,40,40)
-toggle.TextScaled = true
-toggle.Parent = ui
-
-local panel = Instance.new("Frame")
-panel.Size = UDim2.new(0, 360, 0, 400)
-panel.Position = UDim2.new(0,10,0,70)
-panel.BackgroundColor3 = Color3.fromRGB(30,30,30)
-panel.Visible = false
-panel.Parent = ui
-
-toggle.MouseButton1Click:Connect(function()
-	panel.Visible = not panel.Visible
-end)
+ContextActionService:UnbindAction("Combo")
+ContextActionService:UnbindAction("Snowballs")
+ContextActionService:UnbindAction("Off")
+ContextActionService:UnbindAction("Lock")
 
 -------------------------------------------------
--- 🎨 PALETTE
+-- ⭐ COMBO — L3
 -------------------------------------------------
-local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(0,340,0,280)
-scrollFrame.Position = UDim2.new(0,10,0,100)
-scrollFrame.BackgroundTransparency = 1
-scrollFrame.ScrollBarThickness = 10
-scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-scrollFrame.Parent = panel
 
-local gridSize = 12
-local spacing = 28
-
-for row = 0, gridSize-1 do
-	for col = 0, gridSize-1 do
-		local btn = Instance.new("TextButton")
-		btn.Size = UDim2.new(0,24,0,24)
-		btn.Position = UDim2.new(0, col*spacing+10, 0, row*spacing+10)
-		btn.BackgroundColor3 = Color3.fromHSV(col/(gridSize-1), 1-row/(gridSize-1), 1)
-		btn.BorderSizePixel = 0
-		btn.Text = ""
-		btn.Parent = scrollFrame
-
-		btn.MouseButton1Click:Connect(function()
-			updateCrosshairColor(btn.BackgroundColor3)
-		end)
-	end
-end
-
-local blackBtn = Instance.new("TextButton")
-blackBtn.Size = UDim2.new(0,24,0,24)
-blackBtn.Position = UDim2.new(0,10,0,gridSize*spacing+10)
-blackBtn.BackgroundColor3 = Color3.fromRGB(0,0,0)
-blackBtn.BorderSizePixel = 0
-blackBtn.Text = ""
-blackBtn.Parent = scrollFrame
-
-blackBtn.MouseButton1Click:Connect(function()
-	updateCrosshairColor(Color3.fromRGB(0,0,0))
-end)
-
--------------------------------------------------
--- Helpers
--------------------------------------------------
-local function click()
-	VirtualInputManager:SendMouseButtonEvent(CLICK_X, CLICK_Y, 0, true, game, 0)
-	task.wait(speedDelay)
-	VirtualInputManager:SendMouseButtonEvent(CLICK_X, CLICK_Y, 0, false, game, 0)
-end
-
-local function pressAndClick(key, speed)
-	VirtualInputManager:SendKeyEvent(true, key, false, game)
-	task.wait(speed)
-	VirtualInputManager:SendKeyEvent(false, key, false, game)
-	click()
-end
-
-local function comboPress(key)
-	VirtualInputManager:SendKeyEvent(true, key, false, game)
-	task.wait(comboHold)
-	VirtualInputManager:SendKeyEvent(false, key, false, game)
-	click()
-end
-
--------------------------------------------------
--- ⭐ COMBO
--------------------------------------------------
 local holdingL3 = false
 
-ContextActionService:BindAction("Combo", function(_, state)
-	if state == Enum.UserInputState.Begin then
-		holdingL3 = true
+ContextActionService:BindAction(
+	"Combo",
 
-		comboPress(Enum.KeyCode.Seven)
-		comboPress(Enum.KeyCode.Six)
-		comboPress(Enum.KeyCode.One)
-		comboPress(Enum.KeyCode.Five)
+	function(_, state)
 
-		click()
+		if state == Enum.UserInputState.Begin then
 
-		if not holdingL3 then
-			comboPress(Enum.KeyCode.Two)
+			holdingL3 = true
+
+			comboPress(Enum.KeyCode.Four)
+			comboPress(Enum.KeyCode.Five)
+			comboPress(Enum.KeyCode.Six)
+			comboPress(Enum.KeyCode.Seven)
+
+			click()
+
+			if not holdingL3 then
+				comboPress(Enum.KeyCode.Two)
+			end
+
+		elseif state == Enum.UserInputState.End then
+
+			holdingL3 = false
+
 		end
 
-	elseif state == Enum.UserInputState.End then
-		holdingL3 = false
-	end
-end, false, Enum.KeyCode.ButtonL3)
+	end,
+
+	false,
+
+	Enum.KeyCode.ButtonL3
+)
 
 -------------------------------------------------
--- FIXED BINDINGS
+-- ❄️ SNOWBALLS — R3
 -------------------------------------------------
 
-ContextActionService:BindAction("Snowballs", function(_, state)
-	if state == Enum.UserInputState.Begin then
-		pressAndClick(Enum.KeyCode.Eight, snowballSlow)
-		pressAndClick(Enum.KeyCode.Nine, snowballSlow)
-		pressAndClick(Enum.KeyCode.Two, snowballSlow)
-	end
-end, false, Enum.KeyCode.ButtonR3)
-
-ContextActionService:BindAction("RPG", function(_, state)
-	if state == Enum.UserInputState.Begin then
-		pressAndClick(Enum.KeyCode.Four, rpgSpeed)
-		pressAndClick(Enum.KeyCode.R, rpgSpeed)
-		pressAndClick(Enum.KeyCode.Two, rpgSpeed)
-	end
-end, false, Enum.KeyCode.ButtonL1)
-
-ContextActionService:BindAction("Grenade", function(_, state)
-	if state == Enum.UserInputState.Begin then
-		pressAndClick(Enum.KeyCode.Zero, speedDelay)
-		pressAndClick(Enum.KeyCode.Two, speedDelay)
-	end
-end, false, Enum.KeyCode.ButtonR1)
-
-ContextActionService:BindAction("Taser", function(_, state)
-	if state == Enum.UserInputState.Begin then
-		pressAndClick(Enum.KeyCode.Three, speedDelay)
-		
-	end
-end, false, Enum.KeyCode.DPadRight)
-
 -------------------------------------------------
--- 🔧 OFF FIXED
+-- ❄️ SNOWBALLS — R3
+-- Self-repairing after cutscenes/finishers
 -------------------------------------------------
-ContextActionService:BindAction("Off", function(_, state)
-	if state == Enum.UserInputState.Begin then
-		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
-		task.wait(speedDelay)
-		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
-		click()
-	end
-end, false, Enum.KeyCode.DPadDown)
 
--------------------------------------------------
--- LOCK
--------------------------------------------------
-ContextActionService:BindAction("Lock", function(_, state)
-	if state == Enum.UserInputState.Begin then
-		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, true, game, 0)
-		task.wait(speedDelay)
-		VirtualInputManager:SendMouseButtonEvent(LOCK_X, LOCK_Y, 0, false, game, 0)
-	end
-end, false, Enum.KeyCode.ButtonY)
+local function setupSnowballs()
+
+	-- Remove the old binding first
+	ContextActionService:UnbindAction("Snowballs")
+
+	ContextActionService:BindAction(
+		"Snowballs",
+
+		function(_, state)
+
+			if state == Enum.UserInputState.Begin then
+
+				pressAndClick(
+					Enum.KeyCode.Eight,
+					snowballSlow
+				)
+
+				pressAndClick(
+					Enum.KeyCode.Nine,
+					snowballSlow
+				)
+
+				pressAndClick(
+					Enum.KeyCode.Two,
+					snowballSlow
+				)
+
+			end
+
+		end,
+
+		false,
+
+		Enum.KeyCode.ButtonR3
+	)
 
 end
 
+-- Initial setup
+setupSnowballs()
+
 -------------------------------------------------
--- 🎮 LDP SYSTEM (YOUR ADDED SYSTEM)
+-- 🔄 SNOWBALL SELF-REPAIR
 -------------------------------------------------
 
-local lastTap = 0
-local DOUBLE_TAP_TIME = 0.6
-local debounce = false
-local leftHeld = false
+local lastCamera = workspace.CurrentCamera
 
-local function tap(key)
-	VirtualInputManager:SendKeyEvent(true, key, false, game)
-	task.wait(0.03)
-	VirtualInputManager:SendKeyEvent(false, key, false, game)
-	task.wait(0.02)
-end
+task.spawn(function()
 
-local function runSequence()
-	if debounce then return end
-	debounce = true
+	while shared.GrenadeSystemRunning do
 
-	tap(Enum.KeyCode.Escape)
-	tap(Enum.KeyCode.R)
-	tap(Enum.KeyCode.Return)
+		local currentCamera = workspace.CurrentCamera
 
-	task.wait(0.05)
-	debounce = false
-end
+		-- Camera changed, which can happen during/after
+		-- finishers and cutscenes
+		if currentCamera ~= lastCamera then
 
-UserInputService.InputBegan:Connect(function(input, gpe)
-	if gpe then return end
+			lastCamera = currentCamera
 
-	if input.KeyCode == Enum.KeyCode.DPadLeft then
-		leftHeld = true
+			task.wait(0.5)
 
-		-- 🔄 RE-RUN SETUP ON PRESS
-		setup()
+			-- Reconnect ONLY Snowballs
+			setupSnowballs()
 
-		local now = os.clock()
-		if (now - lastTap) <= DOUBLE_TAP_TIME then
-			runSequence()
-			lastTap = 0
-		else
-			lastTap = now
 		end
 
-	elseif input.KeyCode == Enum.KeyCode.ButtonX then
-		if leftHeld then
-			player:Kick("You logged")
-		end
-	end
-end)
+		task.wait(0.1)
 
-UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.DPadLeft then
-		leftHeld = false
 	end
+
 end)
 
 -------------------------------------------------
--- RUN
+-- 🔧 OFF — DPadDown
 -------------------------------------------------
-setup()
+
+ContextActionService:BindAction(
+	"Off",
+
+	function(_, state)
+
+		if state == Enum.UserInputState.Begin then
+
+			VirtualInputManager:SendKeyEvent(
+				true,
+				Enum.KeyCode.Two,
+				false,
+				game
+			)
+
+			task.wait(speedDelay)
+
+			VirtualInputManager:SendKeyEvent(
+				false,
+				Enum.KeyCode.Two,
+				false,
+				game
+			)
+
+			click()
+
+		end
+
+	end,
+
+	false,
+
+	Enum.KeyCode.DPadDown
+)
+
+-------------------------------------------------
+-- 🔒 LOCK — Y
+-------------------------------------------------
+
+local LOCK_X = viewport.X - 190
+local LOCK_Y = viewport.Y - 100
+
+ContextActionService:BindAction(
+	"Lock",
+
+	function(_, state)
+
+		if state == Enum.UserInputState.Begin then
+
+			VirtualInputManager:SendMouseButtonEvent(
+				LOCK_X,
+				LOCK_Y,
+				0,
+				true,
+				game,
+				0
+			)
+
+			task.wait(speedDelay)
+
+			VirtualInputManager:SendMouseButtonEvent(
+				LOCK_X,
+				LOCK_Y,
+				0,
+				false,
+				game,
+				0
+			)
+
+		end
+
+	end,
+
+	false,
+
+	Enum.KeyCode.ButtonY
+)
+
+-------------------------------------------------
+-- 🚀 RPG — L1
+--
+-- Persistent listener.
+-------------------------------------------------
+
+local rpgDebounce = false
+
+local rpgConnection = UserInputService.InputBegan:Connect(
+	function(input)
+
+		if input.KeyCode ~= Enum.KeyCode.ButtonL1 then
+			return
+		end
+
+		if rpgDebounce then
+			return
+		end
+
+		rpgDebounce = true
+
+		task.spawn(function()
+
+			pressAndClick(
+				Enum.KeyCode.One,
+				rpgSpeed
+			)
+
+			pressAndClick(
+				Enum.KeyCode.R,
+				rpgSpeed
+			)
+
+			pressAndClick(
+				Enum.KeyCode.Two,
+				rpgSpeed
+			)
+
+			rpgDebounce = false
+
+		end)
+
+	end
+)
+
+shared.RPGConnection = rpgConnection
+
+-------------------------------------------------
+-- ⚡ TASER — DPadRight
+--
+-- Persistent listener.
+-------------------------------------------------
+
+local taserDebounce = false
+
+local taserConnection = UserInputService.InputBegan:Connect(
+	function(input)
+
+		if input.KeyCode ~= Enum.KeyCode.DPadRight then
+			return
+		end
+
+		if taserDebounce then
+			return
+		end
+
+		taserDebounce = true
+
+		task.spawn(function()
+
+			pressAndClick(
+				Enum.KeyCode.Zero,
+				speedDelay
+			)
+
+			pressAndClick(
+				Enum.KeyCode.Two,
+				speedDelay
+			)
+
+			taserDebounce = false
+
+		end)
+
+	end
+)
+
+shared.TaserConnection = taserConnection
+
+-------------------------------------------------
+-- 💣 GRENADE — R1
+--
+-- IMPORTANT:
+-- R1 is NOT bound to the grenade through
+-- ContextActionService.
+--
+-- We use GetGamepadState() to detect it.
+-------------------------------------------------
+
+local grenadeWasDown = false
+local grenadeBusy = false
+
+-------------------------------------------------
+-- 🛑 HIGH-PRIORITY R1 BLOCK
+--
+-- This consumes the physical R1 input so the
+-- game's inventory should not process it.
+-------------------------------------------------
+
+ContextActionService:BindActionAtPriority(
+	"GrenadeR1Block",
+
+	function(_, state)
+
+		return Enum.ContextActionResult.Sink
+
+	end,
+
+	false,
+
+	Enum.ContextActionPriority.High.Value + 1000,
+
+	Enum.KeyCode.ButtonR1
+)
+
+-------------------------------------------------
+-- 💣 GRENADE POLLING LOOP
+-------------------------------------------------
+
+task.spawn(function()
+
+	while shared.GrenadeSystemRunning do
+
+		local r1Down = false
+
+		local success, gamepadState = pcall(function()
+
+			return UserInputService:GetGamepadState(
+				Enum.UserInputType.Gamepad1
+			)
+
+		end)
+
+		if success and gamepadState then
+
+			for _, input in ipairs(gamepadState) do
+
+				if input.KeyCode == Enum.KeyCode.ButtonR1 then
+
+					if input.UserInputState == Enum.UserInputState.Begin
+						or input.UserInputState == Enum.UserInputState.Change then
+
+						r1Down = true
+
+					end
+
+					break
+
+				end
+
+			end
+
+		end
+
+		-------------------------------------------------
+		-- NEW R1 PRESS
+		-------------------------------------------------
+
+		if r1Down and not grenadeWasDown then
+
+			grenadeWasDown = true
+
+			if not grenadeBusy then
+
+				grenadeBusy = true
+
+				task.spawn(function()
+
+					-------------------------------------------------
+					-- SLOT 3
+					-------------------------------------------------
+
+					VirtualInputManager:SendKeyEvent(
+						true,
+						Enum.KeyCode.Three,
+						false,
+						game
+					)
+
+					task.wait(speedDelay)
+
+					VirtualInputManager:SendKeyEvent(
+						false,
+						Enum.KeyCode.Three,
+						false,
+						game
+					)
+
+					click()
+
+					-------------------------------------------------
+					-- SLOT 2
+					-------------------------------------------------
+
+					VirtualInputManager:SendKeyEvent(
+						true,
+						Enum.KeyCode.Two,
+						false,
+						game
+					)
+
+					task.wait(speedDelay)
+
+					VirtualInputManager:SendKeyEvent(
+						false,
+						Enum.KeyCode.Two,
+						false,
+						game
+					)
+
+					click()
+
+					grenadeBusy = false
+
+				end)
+
+			end
+
+		elseif not r1Down then
+
+			-------------------------------------------------
+			-- R1 RELEASED
+			-------------------------------------------------
+
+			grenadeWasDown = false
+
+		end
+
+		task.wait()
+
+	end
+
+end)
+
+-------------------------------------------------
+-- 📷 FOV LOCK
+-------------------------------------------------
+
+camera.FieldOfView = 115
+
+local fovConnection = camera:GetPropertyChangedSignal(
+	"FieldOfView"
+):Connect(function()
+
+	if camera.FieldOfView ~= 115 then
+		camera.FieldOfView = 115
+	end
+
+end)
+
+shared.FOVConnection = fovConnection
+
+-------------------------------------------------
+-- 🔄 RESPAWN
+-------------------------------------------------
 
 player.CharacterAdded:Connect(function()
+
 	task.wait(0.5)
-	setup()
+
+	-- Reapply FOV after respawn
+	applyFOV()
+
+	-- Make sure the current camera is being watched
+	watchCamera(workspace.CurrentCamera)
+
 end)
