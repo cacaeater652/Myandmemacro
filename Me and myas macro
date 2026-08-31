@@ -17,6 +17,11 @@ if shared.GrenadeSystemRunning then
 	shared.GrenadeSystemRunning = false
 end
 
+-- Stop previous Snowball repair system
+if shared.SnowballRepairRunning then
+	shared.SnowballRepairRunning = false
+end
+
 -- Disconnect previous RPG listener
 if shared.RPGConnection then
 	pcall(function()
@@ -33,7 +38,7 @@ if shared.TaserConnection then
 	shared.TaserConnection = nil
 end
 
--- Disconnect previous FOV connection
+-- Disconnect previous FOV camera connection
 if shared.FOVConnection then
 	pcall(function()
 		shared.FOVConnection:Disconnect()
@@ -41,9 +46,22 @@ if shared.FOVConnection then
 	shared.FOVConnection = nil
 end
 
+-- Disconnect previous FOV property listener
+if shared.FOVPropertyConnection then
+	pcall(function()
+		shared.FOVPropertyConnection:Disconnect()
+	end)
+	shared.FOVPropertyConnection = nil
+end
+
 -- Remove old grenade blocker
 pcall(function()
 	ContextActionService:UnbindAction("GrenadeR1Block")
+end)
+
+-- Remove old Snowballs action
+pcall(function()
+	ContextActionService:UnbindAction("Snowballs")
 end)
 
 -------------------------------------------------
@@ -338,16 +356,11 @@ ContextActionService:BindAction(
 
 -------------------------------------------------
 -- ❄️ SNOWBALLS — R3
--------------------------------------------------
-
--------------------------------------------------
--- ❄️ SNOWBALLS — R3
 -- Self-repairing after cutscenes/finishers
 -------------------------------------------------
 
 local function setupSnowballs()
 
-	-- Remove the old binding first
 	ContextActionService:UnbindAction("Snowballs")
 
 	ContextActionService:BindAction(
@@ -390,24 +403,25 @@ setupSnowballs()
 -- 🔄 SNOWBALL SELF-REPAIR
 -------------------------------------------------
 
+shared.SnowballRepairRunning = true
+
 local lastCamera = workspace.CurrentCamera
 
 task.spawn(function()
 
-	while shared.GrenadeSystemRunning do
+	while shared.SnowballRepairRunning do
 
 		local currentCamera = workspace.CurrentCamera
 
-		-- Camera changed, which can happen during/after
-		-- finishers and cutscenes
 		if currentCamera ~= lastCamera then
 
 			lastCamera = currentCamera
 
 			task.wait(0.5)
 
-			-- Reconnect ONLY Snowballs
-			setupSnowballs()
+			if shared.SnowballRepairRunning then
+				setupSnowballs()
+			end
 
 		end
 
@@ -500,8 +514,6 @@ ContextActionService:BindAction(
 
 -------------------------------------------------
 -- 🚀 RPG — L1
---
--- Persistent listener.
 -------------------------------------------------
 
 local rpgDebounce = false
@@ -547,8 +559,6 @@ shared.RPGConnection = rpgConnection
 
 -------------------------------------------------
 -- ⚡ TASER — DPadRight
---
--- Persistent listener.
 -------------------------------------------------
 
 local taserDebounce = false
@@ -589,12 +599,6 @@ shared.TaserConnection = taserConnection
 
 -------------------------------------------------
 -- 💣 GRENADE — R1
---
--- IMPORTANT:
--- R1 is NOT bound to the grenade through
--- ContextActionService.
---
--- We use GetGamepadState() to detect it.
 -------------------------------------------------
 
 local grenadeWasDown = false
@@ -602,9 +606,6 @@ local grenadeBusy = false
 
 -------------------------------------------------
 -- 🛑 HIGH-PRIORITY R1 BLOCK
---
--- This consumes the physical R1 input so the
--- game's inventory should not process it.
 -------------------------------------------------
 
 ContextActionService:BindActionAtPriority(
@@ -661,10 +662,6 @@ task.spawn(function()
 			end
 
 		end
-
-		-------------------------------------------------
-		-- NEW R1 PRESS
-		-------------------------------------------------
 
 		if r1Down and not grenadeWasDown then
 
@@ -728,10 +725,6 @@ task.spawn(function()
 
 		elseif not r1Down then
 
-			-------------------------------------------------
-			-- R1 RELEASED
-			-------------------------------------------------
-
 			grenadeWasDown = false
 
 		end
@@ -743,22 +736,96 @@ task.spawn(function()
 end)
 
 -------------------------------------------------
--- 📷 FOV LOCK
+-- 📷 FOV LOCK — CUTSCENE SAFE
 -------------------------------------------------
 
-camera.FieldOfView = 115
+local TARGET_FOV = 115
 
-local fovConnection = camera:GetPropertyChangedSignal(
-	"FieldOfView"
-):Connect(function()
+-------------------------------------------------
+-- APPLY FOV
+-------------------------------------------------
 
-	if camera.FieldOfView ~= 115 then
-		camera.FieldOfView = 115
+local function applyFOV()
+
+	local currentCamera = workspace.CurrentCamera
+
+	if currentCamera then
+
+		if currentCamera.FieldOfView ~= TARGET_FOV then
+			currentCamera.FieldOfView = TARGET_FOV
+		end
+
 	end
 
-end)
+end
+
+-------------------------------------------------
+-- WATCH CAMERA FOV
+-------------------------------------------------
+
+local function watchCamera(cameraToWatch)
+
+	if not cameraToWatch then
+		return
+	end
+
+	-- Disconnect previous FOV property listener
+	if shared.FOVPropertyConnection then
+
+		pcall(function()
+			shared.FOVPropertyConnection:Disconnect()
+		end)
+
+	end
+
+	-- Set FOV immediately
+	cameraToWatch.FieldOfView = TARGET_FOV
+
+	-- Keep FOV at 115
+	shared.FOVPropertyConnection =
+		cameraToWatch:GetPropertyChangedSignal("FieldOfView"):Connect(
+			function()
+
+				if cameraToWatch.FieldOfView ~= TARGET_FOV then
+					cameraToWatch.FieldOfView = TARGET_FOV
+				end
+
+			end
+		)
+
+end
+
+-------------------------------------------------
+-- DETECT CAMERA CHANGES
+-------------------------------------------------
+
+local fovConnection =
+	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(
+		function()
+
+			task.wait()
+
+			local newCamera = workspace.CurrentCamera
+
+			if newCamera then
+
+				newCamera.FieldOfView = TARGET_FOV
+
+				watchCamera(newCamera)
+
+			end
+
+		end
+	)
 
 shared.FOVConnection = fovConnection
+
+-------------------------------------------------
+-- INITIAL FOV
+-------------------------------------------------
+
+applyFOV()
+watchCamera(workspace.CurrentCamera)
 
 -------------------------------------------------
 -- 🔄 RESPAWN
@@ -768,10 +835,8 @@ player.CharacterAdded:Connect(function()
 
 	task.wait(0.5)
 
-	-- Reapply FOV after respawn
 	applyFOV()
 
-	-- Make sure the current camera is being watched
 	watchCamera(workspace.CurrentCamera)
 
 end)
